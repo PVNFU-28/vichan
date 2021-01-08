@@ -203,7 +203,7 @@
 	// $config['dnsbl'][] = array('tor.dnsbl.sectoor.de', 1); //sectoor.de site is dead. the number stands for (an) ip adress(es) I guess. 
 	
 	// Replacement for sectoor.de
-	$config['dnsbl'][] = array('rbl.efnet.org', 4);
+	$config['dnsbl'][] = array('rbl.efnetrbl.org'', 4);
 
 	// http://www.sorbs.net/using.shtml
 	// $config['dnsbl'][] = array('dnsbl.sorbs.net', array(2, 3, 4, 5, 6, 7, 8, 9));
