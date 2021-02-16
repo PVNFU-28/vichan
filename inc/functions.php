@@ -73,7 +73,7 @@ function loadConfig() {
 	else {
 		$config = array();
 
-		reset_events();	
+		reset_events();
 
 		$arrays = array(
 			'db',
@@ -301,7 +301,7 @@ function loadConfig() {
 
 	if (is_array($config['anonymous']))
 		$config['anonymous'] = $config['anonymous'][array_rand($config['anonymous'])];
-	
+
 	if ($config['debug']) {
 		if (!isset($debug)) {
 			$debug = array(
@@ -1966,7 +1966,7 @@ function markup_url($matches) {
 		'rel' => 'nofollow',
 		'target' => '_blank',
 	);
-	
+
 	event('markup-url', $link);
 	$link = (array)$link;
 
@@ -1997,7 +1997,7 @@ function unicodify($body) {
 
 function extract_modifiers($body) {
 	$modifiers = array();
-	
+
 	if (preg_match_all('@<tinyboard ([\w\s]+)>(.*?)</tinyboard>@us', $body, $matches, PREG_SET_ORDER)) {
 		foreach ($matches as $match) {
 			if (preg_match('/^escape /', $match[1]))
@@ -2005,7 +2005,7 @@ function extract_modifiers($body) {
 			$modifiers[$match[1]] = html_entity_decode($match[2]);
 		}
 	}
-		
+
 	return $modifiers;
 }
 
@@ -2015,12 +2015,12 @@ function remove_modifiers($body) {
 
 function markup(&$body, $track_cites = false, $op = false) {
 	global $board, $config, $markup_urls;
-	
+
 	$modifiers = extract_modifiers($body);
-	
+
 	$body = preg_replace('@<tinyboard (?!escape )([\w\s]+)>(.+?)</tinyboard>@us', '', $body);
 	$body = preg_replace('@<(tinyboard) escape ([\w\s]+)>@i', '<$1 $2>', $body);
-	
+
 	if (isset($modifiers['raw html']) && $modifiers['raw html'] == '1') {
 		return array();
 	}
@@ -2061,7 +2061,7 @@ function markup(&$body, $track_cites = false, $op = false) {
 		if ($num_links > $config['max_links'])
 			error($config['error']['toomanylinks']);
 	}
-	
+
 	if ($config['markup_repair_tidy'])
 		$body = str_replace('  ', ' &nbsp;', $body);
 
@@ -2078,28 +2078,28 @@ function markup(&$body, $track_cites = false, $op = false) {
 	$tracked_cites = array();
 
 	// Cites
-	if (isset($board) && preg_match_all('/(^|\s)&gt;&gt;(\d+?)([\s,.)?]|$)/m', $body, $cites, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+	if (isset($board) && preg_match_all('/(^|\s)&gt;&gt;(\d+?)((?=[\s,.)?!])|$)/m', $body, $cites, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
 		if (count($cites[0]) > $config['max_cites']) {
 			error($config['error']['toomanycites']);
 		}
 
 		$skip_chars = 0;
 		$body_tmp = $body;
-		
+
 		$search_cites = array();
 		foreach ($cites as $matches) {
 			$search_cites[] = '`id` = ' . $matches[2][0];
 		}
 		$search_cites = array_unique($search_cites);
-		
+
 		$query = query(sprintf('SELECT `thread`, `id` FROM ``posts_%s`` WHERE ' .
 			implode(' OR ', $search_cites), $board['uri'])) or error(db_error());
-		
+
 		$cited_posts = array();
 		while ($cited = $query->fetch(PDO::FETCH_ASSOC)) {
 			$cited_posts[$cited['id']] = $cited['thread'] ? $cited['thread'] : false;
 		}
-				
+
 		foreach ($cites as $matches) {
 			$cite = $matches[2][0];
 
@@ -2132,34 +2132,34 @@ function markup(&$body, $track_cites = false, $op = false) {
 
 		$skip_chars = 0;
 		$body_tmp = $body;
-		
+
 		if (isset($cited_posts)) {
 			// Carry found posts from local board >>X links
 			foreach ($cited_posts as $cite => $thread) {
 				$cited_posts[$cite] = $config['root'] . $board['dir'] . $config['dir']['res'] .
 					($thread ? $thread : $cite) . '.html#' . $cite;
 			}
-			
+
 			$cited_posts = array(
 				$board['uri'] => $cited_posts
 			);
 		} else
 			$cited_posts = array();
-		
+
 		$crossboard_indexes = array();
 		$search_cites_boards = array();
-		
+
 		foreach ($cites as $matches) {
 			$_board = $matches[2][0];
 			$cite = @$matches[3][0];
-			
+
 			if (!isset($search_cites_boards[$_board]))
 				$search_cites_boards[$_board] = array();
 			$search_cites_boards[$_board][] = $cite;
 		}
-		
+
 		$tmp_board = $board['uri'];
-		
+
 		foreach ($search_cites_boards as $_board => $search_cites) {
 			$clauses = array();
 			foreach ($search_cites as $cite) {
@@ -2168,27 +2168,27 @@ function markup(&$body, $track_cites = false, $op = false) {
 				$clauses[] = '`id` = ' . $cite;
 			}
 			$clauses = array_unique($clauses);
-			
+
 			if ($board['uri'] != $_board) {
 				if (!openBoard($_board))
 					continue; // Unknown board
 			}
-			
+
 			if (!empty($clauses)) {
 				$cited_posts[$_board] = array();
-				
+
 				$query = query(sprintf('SELECT `thread`, `id`, `slug` FROM ``posts_%s`` WHERE ' .
 					implode(' OR ', $clauses), $board['uri'])) or error(db_error());
-				
+
 				while ($cite = $query->fetch(PDO::FETCH_ASSOC)) {
 					$cited_posts[$_board][$cite['id']] = $config['root'] . $board['dir'] . $config['dir']['res'] .
 						link_for($cite) . '#' . $cite['id'];
 				}
 			}
-			
+
 			$crossboard_indexes[$_board] = $config['root'] . $board['dir'] . $config['file_index'];
 		}
-		
+
 		// Restore old board
 		if ($board['uri'] != $tmp_board)
 			openBoard($tmp_board);
@@ -2205,7 +2205,7 @@ function markup(&$body, $track_cites = false, $op = false) {
 			if ($cite) {
 				if (isset($cited_posts[$_board][$cite])) {
 					$link = $cited_posts[$_board][$cite];
-					
+
 					$replacement = '<a ' .
 						($_board == $board['uri'] ?
 							'onclick="highlightReply(\''.$cite.'\', event);" '
@@ -2228,7 +2228,7 @@ function markup(&$body, $track_cites = false, $op = false) {
 			}
 		}
 	}
-	
+
 	$tracked_cites = array_unique($tracked_cites, SORT_REGULAR);
 
 	$body = preg_replace("/^\s*&gt;.*$/m", '<span class="quote">$0</span>', $body);
